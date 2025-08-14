@@ -59,7 +59,30 @@ paired_chars = merge_pair(word_splits)
 
 
 
-
 # %%
-next_chars = min(paired_chars.values())>2
+print(paired_chars)
+# %%
+merge_limit = 3
+to_be_merged_list = [key for key, value in paired_chars.items() if value >= merge_limit]
+
+print(to_be_merged_list)
+# %% 
+def pair_to_merge(merge_list,word_splits):
+    
+    for pair in merge_list:
+        str1,str2 = pair
+        merged_pair = str1 + str2
+        print(merged_pair)
+
+
+merged_list = pair_to_merge(to_be_merged_list)
+
+print(list(word_splits.keys())[0][:4])
+
+
+
+
+
+
+
 # %%
