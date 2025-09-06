@@ -61,7 +61,8 @@ paired_chars = merge_pair(word_splits)
 
 # %%
 print(paired_chars)
-# %%
+print(word_splits)
+
 merge_limit = 3
 to_be_merged_list = [key for key, value in paired_chars.items() if value >= merge_limit]
 
@@ -70,15 +71,28 @@ print(to_be_merged_list)
 def pair_to_merge(merge_list,word_splits):
     
     for pair in merge_list:
-        str1,str2 = pair
-        merged_pair = str1 + str2
-        print(merged_pair)
+        char1,char2 = pair
+        i = 0
+
+        word_splits_items = word_splits.items()
+        while i < len(word_splits_items):
+            while i < word_splits_items[i]:
+            word, freq = word_splits_items[i]
+            new_word = []
+
+            if char1 == word[i] and char2 == word[i+1]:
 
 
-merged_list = pair_to_merge(to_be_merged_list)
+    return word_splits
 
-print(list(word_splits.keys())[0][:4])
 
+
+
+
+
+# %%
+new_word_splits = pair_to_merge(to_be_merged_list,word_splits)
+print(new_word_splits)
 
 
 
