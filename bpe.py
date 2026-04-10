@@ -1,4 +1,6 @@
 # %%
+
+from collections import defaultdict
 corpus = [
     "Artificial intelligence is transforming the world.",
     "Cats often nap in sunny windows during the afternoon.",
@@ -22,81 +24,63 @@ eow_token = '</n>'
 # Indicating end of a word
 vocab.append(eow_token)
 
-
+print(len(vocab))
 
 
 # %%
-# Counting the number of times each character appears in the corpus
-def count_pair(corpus):
-    word_splits = {}
-
+word_freqs = defaultdict(int) # if specified key is not found instead of throwing an error constructs it.
+def count_word_freqs(corpus):
     for doc in corpus:
         words = doc.split(' ')
         for word in words:
-            char_list = list(word) + [eow_token]
-            char_list = tuple(char_list) # tuple for immutability otherwise its not accepted by dictionary
-            word_splits[char_list] = word_splits.get(char_list, 0) + 1
-    
+            word_freqs[word] += 1
+
+    return word_freqs 
+
+# %%
+word_splits = {}
+def create_word_splits(word_freqs):
+    for word, _ in word_freqs.items():
+        word_splits[word] = list(word)
     return word_splits
 
-word_splits = count_pair(corpus)
-
-    
 
 # %%
-def merge_pair(word_splits):
-    pair_counts = {}
-    for word_split, count in word_splits.items():
-        for i in range(len(word_split) - 1):
-            pair = (word_split[i], word_split[i+1])
-            pair_counts[pair] = pair_counts.get(pair, 0) + count
-    
-    return pair_counts
-
-
-
-paired_chars = merge_pair(word_splits)
-
-
+merge_pairs = defaultdict(int)
+def count_merge_pairs(word_splits):
+    for word, chars in word_splits.items():
+        freq = word_freqs[word]
+        for i in range(len(chars)-1):
+            pair = (chars[i], chars[i+1])
+            merge_pairs[pair] +=freq
+    return merge_pairs
 
 # %%
-print(paired_chars)
-print(word_splits)
 
-merge_limit = 3
-to_be_merged_list = [key for key, value in paired_chars.items() if value >= merge_limit]
+def apply_merge(word_splits, pair):
+    char1, char2 = pair
+    merged = char1 + char2
+    for _, chars in word_splits.items():
+        for i in range(len(chars)-1):
+            if chars[i] == char1 and chars[i+1] == char2:
+                chars[i] = merged
+                chars.pop(i+1)
+                break
+    return word_splits
 
-print(to_be_merged_list)
 # %% 
-def pair_to_merge(merge_list,word_splits):
-    
-    for pair in merge_list:
-        char1,char2 = pair
-        i = 0
-
-        word_splits_items = word_splits.items()
-        while i < len(word_splits_items):
-            while i < word_splits_items[i]:
-            word, freq = word_splits_items[i]
-            new_word = []
-
-            if char1 == word[i] and char2 == word[i+1]:
-
-
+merge_rules = []
+def bpe(corpus, num_of_merges):
+    for i in range(num_of_merges):
+        word_freqs = count_word_freqs(corpus)
+        word_splits = create_word_splits(word_freqs)
+        merge_pairs = count_merge_pairs(word_splits)
+        best_pair = max(merge_pairs, key=merge_pairs.get)
+        merge_rules.append(best_pair)
+        apply_merge(word_splits, best_pair)    
     return word_splits
-
-
-
-
-
-
+    
+word_splits = bpe(corpus, 30)
 # %%
-new_word_splits = pair_to_merge(to_be_merged_list,word_splits)
-print(new_word_splits)
-
-
-
-
-
-
+print(word_splits)
 # %%
