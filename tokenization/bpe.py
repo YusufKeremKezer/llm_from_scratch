@@ -82,12 +82,5 @@ def bpe(corpus, num_of_merges):
     
 word_splits = bpe(corpus, 30)
 # %%
-def tokenize(word, merge_rules):
-    tokens = list(word)
-    
-    for rule in merge_rules:
-        tokens = apply_merge_to_word(tokens, rule)
-    
-    return tokens
 
 # %%
