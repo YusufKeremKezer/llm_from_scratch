@@ -15,9 +15,7 @@ import math
 
 #scores.shape = (batch_size,sequence_len,sequence_len)
 
-class MHA(nn.module):
-    pass
-class MultiHeadAttention(MHA):
+class MultiHeadAttention(nn.Module):
     def __init__(self, num_heads:int=8, embedding_dim:int=512):
         super().__init__()
         self.num_heads = num_heads
@@ -50,26 +48,37 @@ class MultiHeadAttention(MHA):
 
         return output
 
+class FeedForwardNetwork(nn.Module):
+    def __init__(self, embedding_dim: int=512, expansion_factor: int=4):
+        super().__init__()
+        hidden_dim = embedding_dim * expansion_factor
+        self.net = nn.Sequential(
+            nn.Linear(embedding_dim,hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, embedding_dim)
+
+        )
+    def forward(self,x):
+        return self.net(x)
 
 class TransformerBlock(nn.Module):
-    def __init__(self,embedding_dim:int=512, attention_layer:nn.Module=MHA, num_heads:int=8):
+    def __init__(self, embedding_dim: int=512, num_heads: int=8):
         super().__init__()
-        self.mha = MHA
-        self.ff_dim = embedding_dim*2
-        self.feed_forward = nn.Sequential(
-            nn.Linear(embedding_dim,self.ff_dim), 
-            nn.GELU(),
-            nn.Linear(self.ff_dim,embedding_dim),
-            nn.Dropout(0.2)
-        )
-        self.norm1 = nn.LayerNorm(embedding_dim) #pre normalization
-        self.norm2 = nn.LayerNorm(embedding_dim) #post normalization
+        self.mha = MultiHeadAttention(num_heads, embedding_dim)
+        self.ffn = FeedForwardNetwork(embedding_dim) 
+        self.pre_norm = nn.LayerNorm(embedding_dim) #pre normalization
+        self.post_norm = nn.LayerNorm(embedding_dim) #post normalization
 
     def forward(self,X):
-        X = self.mha.forward(X)
-        X = self.norm1.forward(X)
-        X = self.feed_forward.forward(X)
-        X = self.norm2.forward(X)
+        
+        X_norm = self.pre_norm(X)
+        mha_out = self.mha(X_norm,X_norm,X_norm,mask = 1)
+        X = X + mha_out
+
+        X_norm2 = self.post_norm(X)
+        ffn_out = self.ffn(X_norm2)
+
+        X = X + ffn_out
         return X
 
 
