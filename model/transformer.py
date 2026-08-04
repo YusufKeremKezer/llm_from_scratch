@@ -1,8 +1,8 @@
 from torch import nn
 import torch.nn.functional as F
 import torch
-import numpy as np
 import math
+from .embeddings import Embeddings
 
 # q.shape = (batch_size,sequence_len,embedding_dim)
 # instead of X inputs renamed as q,k,v because now it supports cross-attention
@@ -10,16 +10,16 @@ import math
 # context len means how many words LLM can see
 # Q_proj.shape = Q_proj @ X.transpose() (batch_size,sequence_len,embedding_dim) @ (embedding_dim x embedding_dim).T
     
-# output Q and K and Vshape = (batch_size,sequence_len,embedding_dim) 
+# output Q and K and V shape = (batch_size,sequence_len,embedding_dim) 
 # K.Transpose shape = (batch_size,embedding_dim,sequence_len)
 
-#scores.shape = (batch_size,sequence_len,sequence_len)
+#scores.shape = (batch_size,sequence_len,sequence_len) 
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, num_heads:int=8, embedding_dim:int=512):
         super().__init__()
         self.num_heads = num_heads
-        self.head_dim = embedding_dim/num_heads
+        self.head_dim = embedding_dim // num_heads
 
         self.q_proj = nn.Linear(embedding_dim, embedding_dim)
         self.k_proj = nn.Linear(embedding_dim, embedding_dim)
@@ -35,7 +35,7 @@ class MultiHeadAttention(nn.Module):
 
         scores = torch.matmul(Q, K.transpose(-2,-1)) / math.sqrt(self.head_dim)
 
-        casual_mask = torch.triu(torch.ones(context_len,context_len))
+        casual_mask = torch.triu(torch.ones(context_len,context_len), diagonal = 1).bool()
 
         if mask is not None:
             scores = scores.masked_fill(casual_mask , mask = float("-inf"))
@@ -45,7 +45,6 @@ class MultiHeadAttention(nn.Module):
         attention_output = attention_output.transpose(1, 2).contiguous().view(batch,context_len,-1)        
         
         output = self.out_proj(attention_output) # to communicate between heads
-
         return output
 
 class FeedForwardNetwork(nn.Module):
@@ -61,18 +60,18 @@ class FeedForwardNetwork(nn.Module):
     def forward(self,x):
         return self.net(x)
 
-class TransformerBlock(nn.Module):
+class DecoderBlock(nn.Module):
     def __init__(self, embedding_dim: int=512, num_heads: int=8):
         super().__init__()
         self.mha = MultiHeadAttention(num_heads, embedding_dim)
         self.ffn = FeedForwardNetwork(embedding_dim) 
         self.pre_norm = nn.LayerNorm(embedding_dim) #pre normalization
         self.post_norm = nn.LayerNorm(embedding_dim) #post normalization
-
-    def forward(self,X):
+        
+    def forward(self, X):
         
         X_norm = self.pre_norm(X)
-        mha_out = self.mha(X_norm,X_norm,X_norm,mask = 1)
+        mha_out = self.mha(X_norm, X_norm, X_norm, mask = 1)
         X = X + mha_out
 
         X_norm2 = self.post_norm(X)
@@ -81,6 +80,36 @@ class TransformerBlock(nn.Module):
         X = X + ffn_out
         return X
 
+# batch_size,context_len,embedding_dim
+
+class TransformerModel(nn.Module):
+    def __init__(self, vocab_size: int, embedding_dim: int=512, num_heads: int=8, num_layers: int=6, max_context_len: int=1024):
+        super().__init__()
+
+        self.embedding_dim = embedding_dim
+        self.num_heads = num_heads
+        self.num_layers = num_layers
+        self.max_context_len = max_context_len
+        self.lm_head = nn.Linear(embedding_dim, vocab_size)
+        
+        self.layers = nn.ModuleList([DecoderBlock(embedding_dim, num_heads) for _ in range(num_layers)])
+    
+    def forward(self, idx, targets, embeddings = None):
+        
+        if embeddings is None:
+            token_embeddings = Embeddings(idx)
+        else:
+            token_embeddings = embeddings
+
+        x = DecoderBlock(token_embeddings)
+        logits = self.lm_head(x) # output shape (batch_size , context_len,vocab_size)
+
+        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+
+        return logits, loss
+
 
 class PositionalEncoding(nn.Module):
-    pass
+    def __init__():
+        super.__init__()
+        
