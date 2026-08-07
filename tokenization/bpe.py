@@ -2,50 +2,21 @@
 
 from collections import defaultdict
 
-corpus = [
 
-    "Artificial intelligence is transforming the world.",
+def initialize_vocab(corpus: list[str]):
+    unique_chars = set()
+    for doc in corpus:
+        for char in doc:
+            unique_chars.add(char)
 
-    "Cats often nap in sunny windows during the afternoon.",
-
-    "Quantum mechanics challenges our classical understanding of reality.",
-
-    "A warm cup of coffee can brighten even the coldest morning.",
-
-    "Exploring distant planets demands innovative engineering solutions."
-
-]
-
-
-unique_chars = set()
+    vocab = list(unique_chars)
+    vocab.sort()
+    eow_token = '</n>'
+    # Indicating end of a word
+    vocab.append(eow_token)
+    return vocab
 
 
-for doc in corpus:
-
-    for char in doc:
-
-        unique_chars.add(char)
-
-
-
-vocab = list(unique_chars)
-
-vocab.sort()
-
-
-
-eow_token = '</n>'
-
-# Indicating end of a word
-
-vocab.append(eow_token)
-
-
-print(len(vocab))
-
-
-
-# %%
 
 word_freqs = defaultdict(int) # if specified key is not found instead of throwing an error constructs it.
 
@@ -133,7 +104,8 @@ def apply_merge(word_splits: dict[str, list[str]], pair: tuple[str, str]):
 merge_rules = []
 
 
-def bpe_training(corpus, num_of_merges):
+def bpe_training(corpus: list[str], num_of_merges: int) -> tuple[dict[str,list[str]], list, dict]:
+    vocab = initialize_vocab(corpus)
 
     word_freqs = count_word_freqs(corpus)
 
@@ -147,18 +119,13 @@ def bpe_training(corpus, num_of_merges):
         merge_rules.append(best_pair)
 
         token = apply_merge(word_splits, best_pair)    
+    vocab.extend(merge_rules)
+    token_to_id = {token: idx for idx, token in enumerate(vocab)}
     
-    return word_splits
+    return word_splits, vocab, token_to_id
     
 
 word_splits = bpe_training(corpus, 30)
-
-# %%
-vocab.extend(merge_rules)
-
-token_to_id = {token: idx for idx, token in enumerate(vocab)}
-
-
 
 
 
