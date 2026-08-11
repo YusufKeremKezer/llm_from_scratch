@@ -35,10 +35,10 @@ class MultiHeadAttention(nn.Module):
 
         scores = torch.matmul(Q, K.transpose(-2,-1)) / math.sqrt(self.head_dim)
 
-        casual_mask = torch.triu(torch.ones(context_len,context_len), diagonal = 1).bool()
+        casual_mask = torch.triu(torch.ones(context_len,context_len), diagonal = 1).bool().to(q.device)
 
         if mask is not None:
-            scores = scores.masked_fill(casual_mask , mask = float("-inf"))
+            scores = scores.masked_fill(mask = casual_mask , value = float("-inf"))
 
         logits = torch.softmax(scores, dim = -1)
         attention_output = torch.matmul(logits,V) 
@@ -91,18 +91,21 @@ class TransformerModel(nn.Module):
         self.num_layers = num_layers
         self.max_context_len = max_context_len
         self.lm_head = nn.Linear(embedding_dim, vocab_size)
-        
+        self.embeddings = Embeddings(vocab_size, embedding_dim)
         self.layers = nn.ModuleList([DecoderBlock(embedding_dim, num_heads) for _ in range(num_layers)])
     
     def forward(self, idx, targets, embeddings = None):
         
         if embeddings is None:
-            token_embeddings = Embeddings(idx)
+            token_embeddings = self.embeddings(idx)
         else:
             token_embeddings = embeddings
 
-        x = DecoderBlock(token_embeddings)
+        x=token_embeddings
         
+        for layer in self.layers:
+            x = layer(x)   
+
         logits = self.lm_head(x) # output shape (batch_size , context_len,vocab_size)
 
         loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
@@ -111,6 +114,4 @@ class TransformerModel(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__():
-        super.__init__()
-        
+    pass        
