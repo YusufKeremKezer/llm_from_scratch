@@ -1,7 +1,7 @@
 # %%
 
 from collections import defaultdict
-
+from ..schemas import BPEOutput
 
 def initialize_vocab(corpus: list[str]):
     unique_chars = set()
@@ -104,7 +104,7 @@ def apply_merge(word_splits: dict[str, list[str]], pair: tuple[str, str]):
 merge_rules = []
 
 
-def bpe_training(corpus: list[str], num_of_merges: int) -> tuple[dict[str,list[str]], list, dict]:
+def bpe_training(corpus: list[str], num_of_merges: int) -> BPEOutput:
     vocab = initialize_vocab(corpus)
 
     word_freqs = count_word_freqs(corpus)
@@ -118,18 +118,18 @@ def bpe_training(corpus: list[str], num_of_merges: int) -> tuple[dict[str,list[s
 
         merge_rules.append(best_pair)
 
-        token = apply_merge(word_splits, best_pair)    
+        apply_merge(word_splits, best_pair)    
+
     vocab.extend(merge_rules)
     token_to_id = {token: idx for idx, token in enumerate(vocab)}
     
-    return word_splits, vocab, token_to_id
+    return word_splits, vocab, token_to_id, merge_rules
     
 
-word_splits = bpe_training(corpus, 30)
 
 
 
-def bpe_inference(corpus, merge_rules):
+def bpe_inference(corpus, merge_rules,token_to_id):
 
     all_tokens = []
 
@@ -172,12 +172,3 @@ print(len(merge_rules))
 print(merge_rules)
 
 """
-
-
-tokens,ids = bpe_inference(corpus, merge_rules)
-
-
-print("tokens:", tokens)
-
-print("ids:", ids)
-

@@ -102,6 +102,7 @@ class TransformerModel(nn.Module):
             token_embeddings = embeddings
 
         x = DecoderBlock(token_embeddings)
+        
         logits = self.lm_head(x) # output shape (batch_size , context_len,vocab_size)
 
         loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
